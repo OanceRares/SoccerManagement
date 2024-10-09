@@ -14,6 +14,15 @@ public class Player {
     private String lastName;
     private Integer mmr;  // Player's MMR
 
+    // Constructors
+    public Player() {}
+
+    public Player(String firstName, String lastName, int mmr) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.mmr = mmr;
+    }
+
     // Getters and Setters
 
     public Integer getId() {
