@@ -14,4 +14,15 @@ public class PlayerService {
         return playerRepository.findById(id).orElseThrow(() -> new RuntimeException("Player not found"));
     }
 
+    public Player savePlayer(Player player){
+        return playerRepository.save(player);
+    }
+
+    public boolean deletePlayerById(Integer id) {
+        if (playerRepository.existsById(id)) { // Check if player exists
+            playerRepository.deleteById(id); // Delete player
+            return true;
+        }
+        return false; // Return false if player does not exist
+    }
 }
