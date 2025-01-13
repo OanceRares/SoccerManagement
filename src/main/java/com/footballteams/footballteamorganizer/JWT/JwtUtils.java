@@ -1,76 +1,85 @@
 package com.footballteams.footballteamorganizer.JWT;
 
-import com.footballteams.footballteamorganizer.Models.Player;
-import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParser;
+import io.jsonwebtoken.JwtParserBuilder;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
-import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import javax.crypto.SecretKey;
+
 import java.security.Key;
 import java.util.Date;
 
 @Component
 public class JwtUtils {
+
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
-    @Value("${spring.app.jwtSecret}")
-    private String jwtSecret;
+    @Value("${jwt.secret}")
+    private String jwtSecret;  // Secure key from application.properties
 
-    @Value("${spring.app.jwtExpirationMs}")
-    private int jwtExpirationMs;
+    @Value("${jwt.expirationMs}")
+    private long jwtExpirationMs;  // JWT expiration time in milliseconds
 
+    // Extract JWT token from the Authorization header
     public String getJwtFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         logger.debug("Authorization Header: {}", bearerToken);
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7); // Remove Bearer prefix
+            return bearerToken.substring(7);  // Remove "Bearer " prefix
         }
         return null;
     }
 
-    //todo: change player to user
-    public String generateTokenFromUsername(Player userDetails) {
-        String username = userDetails.getFirstName();
+    public String generateTokenFromEmail(String email) {
         return Jwts.builder()
-                .subject(username)
-                .issuedAt(new Date())
-                .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(key())
+                .setSubject(email)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)  // Signing with secure key
                 .compact();
     }
 
-    public String getUserNameFromJwtToken(String token) {
-        return Jwts.parser()
-                .verifyWith((SecretKey) key())
-                .build().parseSignedClaims(token)
-                .getPayload().getSubject();
+    public String getEmailFromToken(String token) {
+        try {
+            JwtParserBuilder parserBuilder = Jwts.parser();
+            JwtParser parser = parserBuilder
+                    .setSigningKey(getSigningKey())
+                    .build();
+
+            Claims claims = parser.parseClaimsJws(token).getPayload();
+            return claims.getSubject();
+        } catch (io.jsonwebtoken.JwtException e) {
+            logger.error("Failed to parse JWT token: {}", e.getMessage());
+            return null;
+        }
     }
 
-    private Key key() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
-    }
-
+    // Validate the JWT token
     public boolean validateJwtToken(String authToken) {
         try {
-            System.out.println("Validate");
-            Jwts.parser().verifyWith((SecretKey) key()).build().parseSignedClaims(authToken);
-            return true;
-        } catch (MalformedJwtException e) {
-            logger.error("Invalid JWT token: {}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            logger.error("JWT token is expired: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            logger.error("JWT token is unsupported: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            logger.error("JWT claims string is empty: {}", e.getMessage());
+            JwtParserBuilder parserBuilder = Jwts.parser();
+            JwtParser parser = parserBuilder
+                    .setSigningKey(getSigningKey())  // Set the signing key for validation
+                    .build();
+
+            parser.parseClaimsJws(authToken);  // Parse and validate the JWT
+            return true;  // If no exception is thrown, the token is valid
+        } catch (io.jsonwebtoken.JwtException e) {  // Catch any JWT validation exceptions
+            logger.error("JWT validation failed: {}", e.getMessage());
         }
-        return false;
+        return false;  // If any exception occurs, the token is invalid
+    }
+
+    // Get the signing key from the secret
+    private Key getSigningKey() {
+        // Ensure your jwtSecret is sufficiently long for HS512 (minimum 512 bits / 64 bytes)
+        // It's recommended to store your secret in Base64 encoded format
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes());  // Decoding the secret and getting the key
     }
 }

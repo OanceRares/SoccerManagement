@@ -1,59 +1,33 @@
-import React, { useState } from "react";
-import axios from "axios";
-import './App.css';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./components/Login";
+import Signup from "./components/Signup";
+import MainPage from "./components/MainPage"; // Assuming you have a MainPage component
+import ProtectedRoute from "./components/ProtectedRoute"; // We'll create this component
 
 function App() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-
-  const handleLogin = async (event) => {
-    event.preventDefault();
-
-    try {
-      // Send login request to backend
-      const response = await axios.post("http://localhost:8080/api/players/login", {
-        username,
-        password,
-      });
-
-      // Save the JWT to local storage
-      localStorage.setItem("token", response.data.token);
-
-      // Update the UI
-      setMessage("Login successful!");
-    } catch (error) {
-      console.error("Login failed:", error);
-      setMessage("Login failed. Please check your credentials.");
-    }
-  };
-
   return (
-      <div className="App">
-        <h1>Login</h1>
-        <form onSubmit={handleLogin}>
-          <div>
-            <label>Username:</label>
-            <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-            />
-          </div>
-          <div>
-            <label>Password:</label>
-            <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-            />
-          </div>
-          <button type="submit">Login</button>
-        </form>
-        {message && <p>{message}</p>}
-      </div>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Signup />} />
+
+          {/* Protected Routes */}
+          <Route
+              path="/main"
+              element={
+                <ProtectedRoute>
+                  <MainPage />
+                </ProtectedRoute>
+              }
+          />
+
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Router>
   );
 }
 
