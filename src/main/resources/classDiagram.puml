@@ -1,0 +1,55 @@
+@startuml
+class User {
+    +id: int
+    +email: String
+    +password: String
+    +firstName: String
+    +lastName: String
+    +role: String
+    +mmr: int
+}
+
+class Game {
+    +id: int
+    +title: String
+    +description: String
+    +gameDateTime: LocalDateTime
+    +location: String
+    +maxParticipants: int
+    +currentParticipants: int
+    +blackTeam: List<User>
+    +whiteTeam: List<User>
+    +result: String
+}
+
+class GameService {
+    +getGameById()
+    +getUpcomingGames()
+    +addUserToGame()
+    +removeUserFromGame()
+}
+
+class GameController {
+    +createGame()
+    +joinGame()
+    +leaveGame()
+}
+
+class JwtUtils {
+    +generateTokenFromEmail()
+    +getEmailFromToken()
+    +validateJwtToken()
+}
+
+class GameWebSocketHandler {
+    +handleTextMessage()
+    +subscribeToGame()
+    +broadcastToGame()
+}
+
+User "1" --* "many" Game : joins
+GameController --> GameService : calls
+GameService --> Game : manages
+GameController --> JwtUtils : validates token
+GameController --> GameWebSocketHandler : notifies
+@enduml
